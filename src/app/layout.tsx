@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: 'Should I Free Ship' }],
   openGraph: {
-    title: 'Should I Free Ship? — Free shipping calculator for wineries',
+    title: 'Should I Free Ship? — Smart shipping calculator',
     description:
       'Plug in your numbers. See exactly when free shipping pencils out for your winery.',
     url: 'https://shouldifreeship.com',
