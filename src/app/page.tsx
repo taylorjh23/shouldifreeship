@@ -358,7 +358,7 @@ export default function Home() {
                 <XAxis dataKey="bottles" stroke="#78716c" style={{ fontSize: 12 }} label={{ value: 'Bottles', position: 'insideBottom', offset: -5, style: { fontSize: 12, fill: '#78716c' } }} />
                 <YAxis stroke="#78716c" style={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
                 <Tooltip
-                  formatter={(value: number) => [`$${value.toFixed(2)}`, 'Profit']}
+                  formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Profit']}
                   contentStyle={{ background: 'white', border: '1px solid #e7e5e4', borderRadius: 6, fontSize: 13 }}
                 />
                 <ReferenceLine y={0} stroke="#a8a29e" strokeDasharray="4 4" />
