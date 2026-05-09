@@ -519,7 +519,69 @@ export default function Home() {
           </div>
         </div>
       </section>
+      <section className="max-w-3xl mx-auto px-6 pb-20">
+        <div className="prose prose-stone max-w-none">
+          <h2 className="font-serif text-3xl mb-6 leading-tight">
+            How to think about shipping strategy in DTC wine
+          </h2>
 
+          <p className="text-stone-700 leading-relaxed mb-5">
+            Shipping is one of the largest costs in direct-to-consumer wine, and the strategy a winery picks shapes everything from average order value to customer retention. There's no single right answer. The best approach depends on your margins, your buyer, and what you're trying to grow.
+          </p>
+
+          <p className="text-stone-700 leading-relaxed mb-10">
+            The calculator above runs the math. The thinking below covers the tradeoffs each strategy carries — what tends to work, what tends to backfire, and what to weigh before you commit.
+          </p>
+
+          <h3 className="font-serif text-2xl mb-3 mt-10">Free shipping</h3>
+          <p className="text-stone-700 leading-relaxed mb-3">
+            Free shipping is the most aggressive growth lever in DTC. It removes friction at checkout, lifts conversion rates, and is often what tips a customer from a 3-bottle order to a 6-bottle order to hit a free shipping minimum.
+          </p>
+          <p className="text-stone-700 leading-relaxed mb-3">
+            <span className="font-medium">Where it tends to work:</span> wineries with strong bottle margins (60%+ gross), higher price points, and a buyer base concentrated in nearby zones. It also pairs well with a smart minimum-order threshold that pushes customers toward larger carts.
+          </p>
+          <p className="text-stone-700 leading-relaxed mb-8">
+            <span className="font-medium">Where it tends to hurt:</span> wineries with thin margins, value price points, or a national customer base where most orders ship to far zones. Free shipping in those cases can quietly turn profitable orders into breakeven ones — or worse — without the operator realizing it until quarter-end.
+          </p>
+
+          <h3 className="font-serif text-2xl mb-3 mt-10">Flat rate shipping</h3>
+          <p className="text-stone-700 leading-relaxed mb-3">
+            Flat rate gives the customer a known, predictable shipping cost while letting the winery recover most or all of its actual outbound spend. It's the most flexible strategy because the rate can be tuned to match margin and zone reality.
+          </p>
+          <p className="text-stone-700 leading-relaxed mb-3">
+            <span className="font-medium">Where it tends to work:</span> wineries shipping nationally, wineries with mid-tier price points, and operators who want predictable shipping economics regardless of where the order goes. A well-set flat rate can feel generous to customers while still covering the winery's true cost.
+          </p>
+          <p className="text-stone-700 leading-relaxed mb-8">
+            <span className="font-medium">Where it tends to hurt:</span> if the rate is set too high, it can suppress conversion. If it's set too low, it leaves money on the table on every cross-country order. Flat rate also doesn't reward larger carts the way a free-shipping threshold does, so it may slightly compress average order value.
+          </p>
+
+          <h3 className="font-serif text-2xl mb-3 mt-10">Charging actual shipping</h3>
+          <p className="text-stone-700 leading-relaxed mb-3">
+            Passing the actual carrier rate through to the customer is the most margin-protective approach. The winery never absorbs shipping cost, and the operator's economics stay clean regardless of zone or order size.
+          </p>
+          <p className="text-stone-700 leading-relaxed mb-3">
+            <span className="font-medium">Where it tends to work:</span> for premium and ultra-premium wineries with brand pull, where the customer is buying a specific bottle and shipping cost is a small percentage of total spend. It's also the right call when margins are too tight for any subsidy at all.
+          </p>
+          <p className="text-stone-700 leading-relaxed mb-8">
+            <span className="font-medium">Where it tends to hurt:</span> showing $40+ in shipping at checkout on a $60 order is a well-known cart abandonment driver. For value or mid-tier price points, this strategy can suppress conversion enough that the protected margin doesn't outweigh the lost sales.
+          </p>
+
+          <h3 className="font-serif text-2xl mb-3 mt-10">A few things worth weighing</h3>
+          <p className="text-stone-700 leading-relaxed mb-3">
+            Before locking in a strategy, a few questions tend to clarify the picture:
+          </p>
+          <ul className="text-stone-700 leading-relaxed mb-3 space-y-2 ml-5 list-disc">
+            <li>What is your true gross margin per bottle, after COGS, packaging, and platform fees?</li>
+            <li>Where do your orders actually ship — concentrated nearby, or spread cross-country?</li>
+            <li>What is your average order size today, and what would it take to lift it by one or two bottles?</li>
+            <li>How price-sensitive is your customer? Are they buying on price, or buying you?</li>
+            <li>What does your competition do, and what would standing apart cost you?</li>
+          </ul>
+          <p className="text-stone-700 leading-relaxed">
+            The calculator above lets you model each scenario against your real numbers. The right answer is the one that matches how your winery actually runs.
+          </p>
+        </div>
+      </section>
       <section className="bg-stone-900 text-stone-100 py-16 px-6">
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="font-serif text-3xl mb-3">More tools coming soon.</h2>
