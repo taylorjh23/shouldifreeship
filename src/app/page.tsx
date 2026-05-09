@@ -26,7 +26,10 @@ const GOOGLE_FORM_ID = '1FAIpQLSdbT6PvKW2Gin5SPKaFKIQ9tqktLPEUGs6f3NW1j7SrBUcsbQ
 const FIELD_NAME = 'entry.580416978';
 const FIELD_BUSINESS = 'entry.1903935303';
 const FIELD_EMAIL = 'entry.767732606';
-
+const FEEDBACK_FORM_ID = '1FAIpQLSdtyQocP1sPWVtrGD6MFNFgf60CSyetGZfKVF555cO0QdjgLQ';
+const FB_NAME = 'entry.264376165';
+const FB_EMAIL = 'entry.1046135511';
+const FB_MESSAGE = 'entry.839097280';
 export default function Home() {
   const [bottlePrice, setBottlePrice] = useState(35);
   const [cogs, setCogs] = useState(9);
@@ -49,6 +52,12 @@ export default function Home() {
   const [business, setBusiness] = useState('');
   const [email, setEmail] = useState('');
   const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
+  // Feedback popup
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [fbName, setFbName] = useState('');
+  const [fbEmail, setFbEmail] = useState('');
+  const [fbMessage, setFbMessage] = useState('');
+  const [fbStatus, setFbStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
 
   const { shippingCost, customerCharge } = useMemo(() => {
     if (shippingMode === 'exact') {
@@ -164,7 +173,35 @@ export default function Home() {
     return recs;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [breakeven, bottlePrice, cogs, shippingMode, shippingCost, customerCharge]);
+  const handleFeedback = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fbEmail.includes('@') || !fbName.trim() || !fbMessage.trim()) return;
 
+    setFbStatus('sending');
+
+    const formData = new FormData();
+    formData.append(FB_NAME, fbName);
+    formData.append(FB_EMAIL, fbEmail);
+    formData.append(FB_MESSAGE, fbMessage);
+
+    try {
+      await fetch(
+        `https://docs.google.com/forms/d/e/${FEEDBACK_FORM_ID}/formResponse`,
+        { method: 'POST', mode: 'no-cors', body: formData }
+      );
+    } catch (err) {
+      // no-cors prevents reading response, submission usually succeeded
+    }
+
+    setFbStatus('sent');
+    setFbName('');
+    setFbEmail('');
+    setFbMessage('');
+    setTimeout(() => {
+      setFbStatus('idle');
+      setFeedbackOpen(false);
+    }, 2500);
+  };
   const handleEmail = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.includes('@') || !name.trim() || !business.trim()) return;
@@ -632,7 +669,95 @@ export default function Home() {
           )}
         </div>
       </section>
+{/* Floating feedback button */}
+<button
+        onClick={() => setFeedbackOpen(true)}
+        className="fixed bottom-6 right-6 z-40 bg-stone-900 hover:bg-stone-800 text-white text-sm font-medium px-4 py-3 rounded-full shadow-lg flex items-center gap-2 transition"
+        aria-label="Send feedback"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+        Feedback
+      </button>
 
+      {/* Feedback modal */}
+      {feedbackOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-stone-900/60 flex items-center justify-center p-4"
+          onClick={() => setFeedbackOpen(false)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {fbStatus === 'sent' ? (
+              <div className="text-center py-6">
+                <div className="font-serif text-2xl mb-2">Thanks.</div>
+                <p className="text-stone-600 text-sm">Your feedback is in. Talk soon.</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-baseline justify-between mb-4">
+                  <h3 className="font-serif text-2xl">Send feedback</h3>
+                  <button
+                    onClick={() => setFeedbackOpen(false)}
+                    className="text-stone-400 hover:text-stone-700 text-2xl leading-none"
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+                </div>
+                <p className="text-sm text-stone-600 mb-5 leading-relaxed">
+                  Found a bug, got an idea, or just want to share what's working? I read every one.
+                </p>
+                <form onSubmit={handleFeedback} className="space-y-3">
+                  <input
+                    type="text"
+                    required
+                    value={fbName}
+                    onChange={(e) => setFbName(e.target.value)}
+                    placeholder="Your name"
+                    className="w-full px-3 py-2 border border-stone-300 rounded text-sm focus:outline-none focus:border-stone-500"
+                  />
+                  <input
+                    type="email"
+                    required
+                    value={fbEmail}
+                    onChange={(e) => setFbEmail(e.target.value)}
+                    placeholder="you@business.com"
+                    className="w-full px-3 py-2 border border-stone-300 rounded text-sm focus:outline-none focus:border-stone-500"
+                  />
+                  <textarea
+                    required
+                    value={fbMessage}
+                    onChange={(e) => setFbMessage(e.target.value)}
+                    placeholder="What's on your mind?"
+                    rows={5}
+                    className="w-full px-3 py-2 border border-stone-300 rounded text-sm focus:outline-none focus:border-stone-500 resize-none"
+                  />
+                  <div className="flex gap-2 justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setFeedbackOpen(false)}
+                      className="px-4 py-2 text-sm text-stone-600 hover:text-stone-900"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={fbStatus === 'sending'}
+                      className="px-5 py-2 text-sm bg-rose-700 hover:bg-rose-800 disabled:opacity-50 text-white rounded font-medium"
+                    >
+                      {fbStatus === 'sending' ? 'Sending...' : 'Send'}
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
       <footer className="bg-stone-900 text-stone-500 py-8 px-6 border-t border-stone-800">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3 text-sm">
           <span>© {new Date().getFullYear()} Should I Free Ship?</span>
