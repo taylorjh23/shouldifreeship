@@ -36,6 +36,7 @@ export default function Home() {
   const [platformFee, setPlatformFee] = useState(3.5);
   const [discount, setDiscount] = useState(0);
   const [packCost, setPackCost] = useState(5);
+  const [monthlyOrders, setMonthlyOrders] = useState(50);
   const [shippingMode, setShippingMode] = useState<'exact' | 'zone' | 'flat'>('zone');
 
   // Shipping inputs — each mode tracks both your cost AND customer charge
@@ -84,6 +85,10 @@ export default function Home() {
   };
 
   const current = calc(bottles);
+  // Annual projections
+  const annualRevenue = current.revenue * monthlyOrders * 12;
+  const annualProfit = current.profit * monthlyOrders * 12;
+  const annualShippingAbsorbed = shippingAbsorbed * monthlyOrders * 12;
 
   // Find breakeven bottle count
   const breakeven = useMemo(() => {
@@ -223,6 +228,10 @@ export default function Home() {
                 <Input label="Packaging & materials" prefix="$" value={packCost} onChange={setPackCost} step={0.5} />
               </Section>
 
+              <Section title="Volume">
+                <Input label="Monthly DTC orders (avg)" value={monthlyOrders} onChange={setMonthlyOrders} step={1} />
+              </Section>
+
               <Section title="Shipping">
                 <div className="flex gap-2 mb-4">
                   {(['exact', 'zone', 'flat'] as const).map((mode) => (
@@ -329,7 +338,38 @@ export default function Home() {
                 highlight={current.profit > 0 ? 'good' : current.profit < 0 ? 'bad' : 'neutral'}
               />
             </div>
-
+{/* Annual impact */}
+<div className="bg-stone-900 text-stone-100 rounded-lg p-6">
+              <div className="text-xs uppercase tracking-wider text-stone-400 mb-3">Annual impact at {monthlyOrders} orders/month</div>
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <div>
+                  <div className="text-xs text-stone-400 mb-1">Revenue</div>
+                  <div className="font-serif text-xl">${(annualRevenue / 1000).toFixed(1)}K</div>
+                </div>
+                <div>
+                  <div className="text-xs text-stone-400 mb-1">Profit</div>
+                  <div className={`font-serif text-xl ${annualProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {annualProfit >= 0 ? '+' : '-'}${Math.abs(annualProfit / 1000).toFixed(1)}K
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-stone-400 mb-1">Shipping absorbed</div>
+                  <div className="font-serif text-xl text-rose-400">
+                    ${(annualShippingAbsorbed / 1000).toFixed(1)}K
+                  </div>
+                </div>
+              </div>
+              {annualShippingAbsorbed > 0 && (
+                <div className="text-sm text-stone-300 leading-relaxed border-t border-stone-700 pt-4">
+                  You're absorbing <span className="font-medium text-rose-400">${annualShippingAbsorbed.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span> in shipping per year. That's money that could go back into your wine, your team, or your bottom line.
+                </div>
+              )}
+              {annualProfit > 0 && annualShippingAbsorbed === 0 && (
+                <div className="text-sm text-stone-300 leading-relaxed border-t border-stone-700 pt-4">
+                  At this scenario, you're netting <span className="font-medium text-emerald-400">${annualProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span> in profit per year. Shipping isn't eating your margin.
+                </div>
+              )}
+            </div>
             {/* Recommendations */}
             <div className="bg-white border border-stone-200 rounded-lg p-6">
               <h3 className="font-serif text-xl mb-4">Recommendations</h3>
