@@ -22,14 +22,12 @@ const ZONE_ESTIMATES: Record<string, number> = {
   '8': 50,
 };
 
-// Google Form integration
 const GOOGLE_FORM_ID = '1FAIpQLSdbT6PvKW2Gin5SPKaFKIQ9tqktLPEUGs6f3NW1j7SrBUcsbQ';
 const FIELD_NAME = 'entry.580416978';
 const FIELD_BUSINESS = 'entry.1903935303';
 const FIELD_EMAIL = 'entry.767732606';
 
 export default function Home() {
-  // Inputs
   const [bottlePrice, setBottlePrice] = useState(35);
   const [cogs, setCogs] = useState(9);
   const [bottles, setBottles] = useState(3);
@@ -37,9 +35,9 @@ export default function Home() {
   const [discount, setDiscount] = useState(0);
   const [packCost, setPackCost] = useState(5);
   const [monthlyOrders, setMonthlyOrders] = useState(50);
+  const [compareFlatRate, setCompareFlatRate] = useState(15);
   const [shippingMode, setShippingMode] = useState<'exact' | 'zone' | 'flat'>('zone');
 
-  // Shipping inputs — each mode tracks both your cost AND customer charge
   const [exactShipCost, setExactShipCost] = useState(35);
   const [exactShipCharge, setExactShipCharge] = useState(0);
   const [zone, setZone] = useState('5');
@@ -47,13 +45,11 @@ export default function Home() {
   const [flatShipCost, setFlatShipCost] = useState(35);
   const [flatShipCharge, setFlatShipCharge] = useState(15);
 
-  // Email capture
   const [name, setName] = useState('');
   const [business, setBusiness] = useState('');
   const [email, setEmail] = useState('');
   const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
 
-  // Compute shipping cost and customer charge based on mode
   const { shippingCost, customerCharge } = useMemo(() => {
     if (shippingMode === 'exact') {
       return { shippingCost: exactShipCost, customerCharge: exactShipCharge };
@@ -64,33 +60,60 @@ export default function Home() {
     return { shippingCost: flatShipCost, customerCharge: flatShipCharge };
   }, [shippingMode, exactShipCost, exactShipCharge, zone, zoneShipCharge, flatShipCost, flatShipCharge]);
 
-  // Net shipping the winery absorbs
-  const shippingAbsorbed = Math.max(0, shippingCost - customerCharge);
-
-  // Calc function for any bottle count
+  // Wine and shipping tracked separately for clarity
   const calc = (b: number) => {
     const grossRevenue = b * bottlePrice;
     const discountAmt = grossRevenue * (discount / 100);
-    const netRevenue = grossRevenue - discountAmt;
+    const wineRevenue = grossRevenue - discountAmt;
     const cogsTotal = b * cogs;
-    const fee = (netRevenue + customerCharge) * (platformFee / 100);
-    const totalCost = cogsTotal + fee + shippingCost + packCost;
-    const totalRevenue = netRevenue + customerCharge;
+    const fee = wineRevenue * (platformFee / 100);
+    const wineCost = cogsTotal + fee + packCost;
+    const wineProfit = wineRevenue - wineCost;
+    const shippingGap = shippingCost - customerCharge;
+    const netProfit = wineProfit - shippingGap;
+
     return {
-      revenue: totalRevenue,
-      cost: totalCost,
-      profit: totalRevenue - totalCost,
-      shippingAbsorbed,
+      wineRevenue,
+      wineCost,
+      wineProfit,
+      shippingCost,
+      customerCharge,
+      shippingGap,
+      profit: netProfit,
     };
   };
 
   const current = calc(bottles);
-  // Annual projections
-  const annualRevenue = current.revenue * monthlyOrders * 12;
-  const annualProfit = current.profit * monthlyOrders * 12;
-  const annualShippingAbsorbed = shippingAbsorbed * monthlyOrders * 12;
 
-  // Find breakeven bottle count
+  const annualWineRevenue = current.wineRevenue * monthlyOrders * 12;
+  const annualProfit = current.profit * monthlyOrders * 12;
+  const annualShippingGap = current.shippingGap * monthlyOrders * 12;
+
+  // Scenario comparison — wine math is identical, only shipping recovery changes
+  const scenarioCalc = (customerChargeOverride: number) => {
+    const grossRevenue = bottles * bottlePrice;
+    const discountAmt = grossRevenue * (discount / 100);
+    const wineRevenue = grossRevenue - discountAmt;
+    const cogsTotal = bottles * cogs;
+    const fee = wineRevenue * (platformFee / 100);
+    const wineProfit = wineRevenue - cogsTotal - fee - packCost;
+    const shippingGap = shippingCost - customerChargeOverride;
+    const profit = wineProfit - shippingGap;
+    return {
+      profit,
+      annualProfit: profit * monthlyOrders * 12,
+      shippingGap,
+    };
+  };
+
+  const scenarios = [
+    { id: 'free', label: 'Free shipping', sublabel: 'Customer pays $0', result: scenarioCalc(0) },
+    { id: 'flat', label: `Flat rate $${compareFlatRate}`, sublabel: `Customer pays $${compareFlatRate}`, result: scenarioCalc(compareFlatRate) },
+    { id: 'full', label: 'Customer pays full', sublabel: `Customer pays $${shippingCost.toFixed(0)}`, result: scenarioCalc(shippingCost) },
+  ];
+
+  const winnerIdx = scenarios.reduce((bestIdx, s, i, arr) => s.result.annualProfit > arr[bestIdx].result.annualProfit ? i : bestIdx, 0);
+
   const breakeven = useMemo(() => {
     for (let b = 1; b <= 36; b++) {
       if (calc(b).profit >= 0) return b;
@@ -99,7 +122,6 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bottlePrice, cogs, platformFee, discount, packCost, shippingCost, customerCharge]);
 
-  // Curve data
   const curveData = useMemo(() => {
     const data = [];
     for (let b = 1; b <= 12; b++) {
@@ -110,7 +132,6 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bottlePrice, cogs, platformFee, discount, packCost, shippingCost, customerCharge]);
 
-  // Smart recommendations
   const recommendations = useMemo(() => {
     const recs: string[] = [];
 
@@ -126,19 +147,16 @@ export default function Home() {
       }
     }
 
-    // Margin check
     const marginPct = bottlePrice > 0 ? ((bottlePrice - cogs) / bottlePrice) * 100 : 0;
     if (marginPct < 50) {
       recs.push(`Your bottle margin is ${marginPct.toFixed(0)}%. Wineries typically need 60%+ margin to absorb shipping. Consider raising your price or sourcing.`);
     }
 
-    // Flat rate suggestion
     if (shippingMode !== 'flat' && breakeven && breakeven > 4) {
       const suggestedFlat = Math.round(shippingCost * 0.5);
       recs.push(`Free shipping needs ${breakeven}+ bottles to pencil out. A flat rate around $${suggestedFlat} could be more profitable while still feeling like a deal to customers.`);
     }
 
-    // Charging customer suggestion
     if (customerCharge === 0 && breakeven && breakeven > 3) {
       recs.push(`Even charging $${Math.round(shippingCost * 0.4)}–$${Math.round(shippingCost * 0.6)} for shipping would close most of your gap and feel reasonable to customers.`);
     }
@@ -159,7 +177,6 @@ export default function Home() {
     formData.append(FIELD_EMAIL, email);
 
     try {
-      // Google Forms requires no-cors mode; submission still works
       await fetch(
         `https://docs.google.com/forms/d/e/${GOOGLE_FORM_ID}/formResponse`,
         {
@@ -174,7 +191,6 @@ export default function Home() {
       setEmail('');
       setTimeout(() => setEmailStatus('idle'), 5000);
     } catch (err) {
-      // no-cors means we can't read response, but submission usually succeeded
       setEmailStatus('sent');
       setName('');
       setBusiness('');
@@ -185,7 +201,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900">
-      {/* Header */}
       <header className="border-b border-stone-200 bg-white">
         <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -198,20 +213,17 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero */}
       <section className="max-w-5xl mx-auto px-6 pt-16 pb-10">
         <h1 className="font-serif text-4xl md:text-5xl tracking-tight mb-4 leading-tight">
-        Smart shipping wins customers and protects your margins.
+          Smart shipping wins customers and protects your margins.
         </h1>
         <p className="text-lg text-stone-600 max-w-2xl leading-relaxed">
-        Plug in your numbers to compare free shipping, flat rate, and zone-based pricing — and find the strategy that fits your wines, your margins, and your buyers.
+          Plug in your numbers to compare free shipping, flat rate, and zone-based pricing — and find the strategy that fits your wines, your margins, and your buyers.
         </p>
       </section>
 
-      {/* Calculator */}
       <section id="calculator" className="max-w-5xl mx-auto px-6 pb-16">
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Inputs */}
           <div className="bg-white border border-stone-200 rounded-lg p-6">
             <h2 className="font-serif text-2xl mb-6">Your numbers</h2>
 
@@ -285,23 +297,26 @@ export default function Home() {
                   </div>
                 )}
 
-                {shippingAbsorbed > 0 && (
+                {current.shippingGap > 0 && (
                   <div className="mt-3 text-xs text-stone-600 bg-stone-50 border border-stone-200 rounded px-3 py-2">
-                    You're absorbing <span className="font-medium text-rose-700">${shippingAbsorbed.toFixed(2)}</span> in shipping per order.
+                    You're absorbing <span className="font-medium text-rose-700">${current.shippingGap.toFixed(2)}</span> in shipping per order.
                   </div>
                 )}
-                {shippingAbsorbed === 0 && customerCharge >= shippingCost && customerCharge > 0 && (
+                {current.shippingGap < 0 && (
                   <div className="mt-3 text-xs text-stone-600 bg-emerald-50 border border-emerald-200 rounded px-3 py-2">
-                    Customer covers shipping fully{customerCharge > shippingCost ? ` — plus $${(customerCharge - shippingCost).toFixed(2)} extra margin` : ''}.
+                    Customer is paying <span className="font-medium text-emerald-700">${Math.abs(current.shippingGap).toFixed(2)}</span> more than your shipping cost — extra margin on every order.
+                  </div>
+                )}
+                {current.shippingGap === 0 && customerCharge > 0 && (
+                  <div className="mt-3 text-xs text-stone-600 bg-stone-50 border border-stone-200 rounded px-3 py-2">
+                    Shipping breakeven — customer covers your cost exactly.
                   </div>
                 )}
               </Section>
             </div>
           </div>
 
-          {/* Results */}
           <div className="space-y-6">
-            {/* Verdict */}
             <div
               className={`rounded-lg p-6 border ${
                 current.profit > 0
@@ -321,56 +336,64 @@ export default function Home() {
               </div>
               <div className="text-stone-700 leading-relaxed">
                 {current.profit > 0
-                  ? `On ${bottles} bottle${bottles > 1 ? 's' : ''} you net $${current.profit.toFixed(2)}${shippingAbsorbed > 0 ? ` after absorbing $${shippingAbsorbed.toFixed(2)} in shipping` : ''}.`
+                  ? `Wine profit: $${current.wineProfit.toFixed(2)}.${current.shippingGap > 0 ? ` Shipping eats $${current.shippingGap.toFixed(2)} of that.` : current.shippingGap < 0 ? ` Plus $${Math.abs(current.shippingGap).toFixed(2)} extra from shipping.` : ''} Net: $${current.profit.toFixed(2)} per order.`
                   : current.profit < 0
-                  ? `${bottles} bottle${bottles > 1 ? 's' : ''} costs you $${Math.abs(current.profit).toFixed(2)}. ${breakeven ? `You break even at ${breakeven} bottles.` : `Even at 36 bottles you'd lose money — review your margins.`}`
-                  : `You cover costs exactly. No room for error.`}
+                  ? `You're out $${Math.abs(current.profit).toFixed(2)} on this order. ${current.shippingGap > current.wineProfit ? `Shipping gap of $${current.shippingGap.toFixed(2)} is wiping out your wine profit.` : `Wine margin isn't covering costs.`} ${breakeven ? `Breakeven hits at ${breakeven} bottles.` : `Margins need a rework — at any reasonable order size you'd still lose money.`}`
+                  : `Breakeven exactly. No profit, no loss.`}
               </div>
             </div>
 
-            {/* Metric cards */}
             <div className="grid grid-cols-3 gap-3">
-              <Metric label="Revenue" value={`$${current.revenue.toFixed(2)}`} />
-              <Metric label="Total cost" value={`$${current.cost.toFixed(2)}`} />
+              <Metric label="Wine profit" value={`$${current.wineProfit.toFixed(2)}`} />
+              <Metric
+                label={current.shippingGap > 0 ? 'Shipping loss' : current.shippingGap < 0 ? 'Shipping gain' : 'Shipping'}
+                value={`${current.shippingGap > 0 ? '-' : current.shippingGap < 0 ? '+' : ''}$${Math.abs(current.shippingGap).toFixed(2)}`}
+                highlight={current.shippingGap > 0 ? 'bad' : current.shippingGap < 0 ? 'good' : 'neutral'}
+              />
               <Metric
                 label="Net profit"
                 value={`${current.profit >= 0 ? '+' : '-'}$${Math.abs(current.profit).toFixed(2)}`}
                 highlight={current.profit > 0 ? 'good' : current.profit < 0 ? 'bad' : 'neutral'}
               />
             </div>
-{/* Annual impact */}
-<div className="bg-stone-900 text-stone-100 rounded-lg p-6">
+
+            <div className="bg-stone-900 text-stone-100 rounded-lg p-6">
               <div className="text-xs uppercase tracking-wider text-stone-400 mb-3">Annual impact at {monthlyOrders} orders/month</div>
               <div className="grid grid-cols-3 gap-4 mb-4">
                 <div>
-                  <div className="text-xs text-stone-400 mb-1">Revenue</div>
-                  <div className="font-serif text-xl">${(annualRevenue / 1000).toFixed(1)}K</div>
+                  <div className="text-xs text-stone-400 mb-1">Wine revenue</div>
+                  <div className="font-serif text-xl">${(annualWineRevenue / 1000).toFixed(1)}K</div>
                 </div>
                 <div>
-                  <div className="text-xs text-stone-400 mb-1">Profit</div>
+                  <div className="text-xs text-stone-400 mb-1">{annualShippingGap > 0 ? 'Shipping loss' : annualShippingGap < 0 ? 'Shipping gain' : 'Shipping'}</div>
+                  <div className={`font-serif text-xl ${annualShippingGap > 0 ? 'text-rose-400' : annualShippingGap < 0 ? 'text-emerald-400' : 'text-stone-300'}`}>
+                    {annualShippingGap > 0 ? '-' : annualShippingGap < 0 ? '+' : ''}${Math.abs(annualShippingGap / 1000).toFixed(1)}K
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-stone-400 mb-1">Net profit</div>
                   <div className={`font-serif text-xl ${annualProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                     {annualProfit >= 0 ? '+' : '-'}${Math.abs(annualProfit / 1000).toFixed(1)}K
                   </div>
                 </div>
-                <div>
-                  <div className="text-xs text-stone-400 mb-1">Shipping absorbed</div>
-                  <div className="font-serif text-xl text-rose-400">
-                    ${(annualShippingAbsorbed / 1000).toFixed(1)}K
-                  </div>
-                </div>
               </div>
-              {annualShippingAbsorbed > 0 && (
+              {annualShippingGap > 0 && (
                 <div className="text-sm text-stone-300 leading-relaxed border-t border-stone-700 pt-4">
-                  You're absorbing <span className="font-medium text-rose-400">${annualShippingAbsorbed.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span> in shipping per year. That's money that could go back into your wine, your team, or your bottom line.
+                  Shipping is costing you <span className="font-medium text-rose-400">${annualShippingGap.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span> per year. That's cash flow eaten by carriers — recoverable with a smarter shipping strategy.
                 </div>
               )}
-              {annualProfit > 0 && annualShippingAbsorbed === 0 && (
+              {annualShippingGap < 0 && (
                 <div className="text-sm text-stone-300 leading-relaxed border-t border-stone-700 pt-4">
-                  At this scenario, you're netting <span className="font-medium text-emerald-400">${annualProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span> in profit per year. Shipping isn't eating your margin.
+                  Shipping is adding <span className="font-medium text-emerald-400">${Math.abs(annualShippingGap).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span> to your bottom line per year. Customer charges exceed your shipping cost.
+                </div>
+              )}
+              {annualShippingGap === 0 && (
+                <div className="text-sm text-stone-300 leading-relaxed border-t border-stone-700 pt-4">
+                  Shipping is breakeven — customers are covering exactly what you're paying.
                 </div>
               )}
             </div>
-            {/* Recommendations */}
+
             <div className="bg-white border border-stone-200 rounded-lg p-6">
               <h3 className="font-serif text-xl mb-4">Recommendations</h3>
               <ul className="space-y-3">
@@ -385,7 +408,88 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Chart */}
+        <div className="mt-8 bg-white border border-stone-200 rounded-lg p-6">
+          <div className="flex items-baseline justify-between mb-2 flex-wrap gap-2">
+            <h3 className="font-serif text-xl">Compare strategies</h3>
+            <span className="text-sm text-stone-500">Same order, three shipping plays</span>
+          </div>
+          <p className="text-sm text-stone-600 mb-5">
+            Using your inputs above, here's how each strategy stacks up at {bottles} bottle{bottles > 1 ? 's' : ''} per order, {monthlyOrders} orders/month.
+          </p>
+
+          <div className="mb-5 max-w-xs">
+            <label className="text-sm text-stone-700 mb-1 block">Flat rate to test</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500 text-sm">$</span>
+              <input
+                type="number"
+                value={compareFlatRate}
+                onChange={(e) => setCompareFlatRate(parseFloat(e.target.value) || 0)}
+                onFocus={(e) => e.target.select()}
+                step={1}
+                className="w-full py-2 pl-7 pr-3 border border-stone-300 rounded bg-white text-sm focus:outline-none focus:border-stone-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-3 gap-3">
+            {scenarios.map((s, i) => {
+              const isWinner = i === winnerIdx && s.result.annualProfit > 0;
+              const isProfitable = s.result.profit > 0;
+              return (
+                <div
+                  key={s.id}
+                  className={`relative rounded-lg p-5 border ${
+                    isWinner
+                      ? 'bg-emerald-50 border-emerald-300'
+                      : isProfitable
+                      ? 'bg-stone-50 border-stone-200'
+                      : 'bg-rose-50 border-rose-200'
+                  }`}
+                >
+                  {isWinner && (
+                    <div className="absolute -top-2 left-4 bg-emerald-700 text-white text-[10px] uppercase tracking-wider px-2 py-1 rounded">
+                      Best annual profit
+                    </div>
+                  )}
+                  <div className="font-serif text-lg mb-1">{s.label}</div>
+                  <div className="text-xs text-stone-500 mb-4">{s.sublabel}</div>
+                  <div className="space-y-2">
+                    <div>
+                      <div className="text-xs text-stone-500">Per order</div>
+                      <div className={`text-lg font-medium ${s.result.profit >= 0 ? 'text-stone-900' : 'text-rose-700'}`}>
+                        {s.result.profit >= 0 ? '+' : '-'}${Math.abs(s.result.profit).toFixed(2)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-stone-500">Per year</div>
+                      <div className={`text-xl font-medium ${s.result.annualProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                        {s.result.annualProfit >= 0 ? '+' : '-'}${Math.abs(s.result.annualProfit).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                      </div>
+                    </div>
+                    {s.result.shippingGap > 0 && (
+                      <div className="pt-2 border-t border-stone-200/60">
+                        <div className="text-xs text-stone-500">Shipping loss</div>
+                        <div className="text-sm text-rose-700">${s.result.shippingGap.toFixed(2)}/order</div>
+                      </div>
+                    )}
+                    {s.result.shippingGap < 0 && (
+                      <div className="pt-2 border-t border-stone-200/60">
+                        <div className="text-xs text-stone-500">Shipping gain</div>
+                        <div className="text-sm text-emerald-700">+${Math.abs(s.result.shippingGap).toFixed(2)}/order</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <p className="text-xs text-stone-500 mt-4 leading-relaxed">
+            Numbers reflect your current product, cost, and zone inputs. Adjust any of those above and the comparison updates live.
+          </p>
+        </div>
+
         <div className="mt-8 bg-white border border-stone-200 rounded-lg p-6">
           <div className="flex items-baseline justify-between mb-4">
             <h3 className="font-serif text-xl">Profitability curve</h3>
@@ -416,7 +520,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Email capture */}
       <section className="bg-stone-900 text-stone-100 py-16 px-6">
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="font-serif text-3xl mb-3">More tools coming soon.</h2>
@@ -468,7 +571,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="bg-stone-900 text-stone-500 py-8 px-6 border-t border-stone-800">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3 text-sm">
           <span>© {new Date().getFullYear()} Should I Free Ship?</span>
@@ -516,6 +618,7 @@ function Input({
           type="number"
           value={value}
           onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+          onFocus={(e) => e.target.select()}
           step={step}
           className={`w-full py-2 border border-stone-300 rounded bg-white text-sm focus:outline-none focus:border-stone-500 ${
             prefix ? 'pl-7' : 'pl-3'
